@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline AI Assistant</title>
+    <meta name="description" content="A local, offline AI assistant with RAG document Q&A capabilities powered by llama.cpp">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- ── Sidebar ─────────────────────────────────── -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <span class="logo-text">AI Assistant</span>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Status Indicator -->
+                <div class="status-card" id="statusCard">
+                    <div class="status-dot"></div>
+                    <div class="status-info">
+                        <span class="status-label">General Chat</span>
+                        <span class="status-detail">No document loaded</span>
+                    </div>
+                </div>
+
+                <!-- Document Upload -->
+                <div class="upload-section">
+                    <h3 class="section-title">Document</h3>
+                    <div class="upload-zone" id="uploadZone">
+                        <input type="file" id="fileInput" accept=".pdf,.txt" hidden>
+                        <div class="upload-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                                <path d="M21 15V19A2 2 0 0 1 19 21H5A2 2 0 0 1 3 19V15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <polyline points="17,8 12,3 7,8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <p class="upload-text">Drop PDF or TXT here</p>
+                        <p class="upload-subtext">or click to browse</p>
+                    </div>
+
+                    <!-- Loaded Document Info (hidden by default) -->
+                    <div class="doc-info" id="docInfo" style="display:none;">
+                        <div class="doc-card">
+                            <div class="doc-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path d="M14 2H6A2 2 0 0 0 4 4V20A2 2 0 0 0 6 22H18A2 2 0 0 0 20 20V8Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div class="doc-details">
+                                <span class="doc-name" id="docName">—</span>
+                                <span class="doc-meta" id="docMeta">—</span>
+                            </div>
+                            <button class="doc-clear" id="clearDoc" title="Remove document">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                                    <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="btn-summary" id="showSummary">Show Summary</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="model-info">
+                    <span class="model-badge">LOCAL</span>
+                    <span class="model-name">Mini-Mistral Q4</span>
+                </div>
+                <p class="footer-note">Fully offline • CPU inference</p>
+            </div>
+        </aside>
+
+        <!-- ── Main Chat Area ──────────────────────────── -->
+        <main class="chat-main">
+            <!-- Top Bar -->
+            <header class="chat-header">
+                <button class="menu-btn" id="menuBtn" aria-label="Open sidebar">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <div class="header-title">
+                    <h1 id="headerTitle">Offline AI Assistant</h1>
+                    <span class="header-subtitle" id="headerSubtitle">General Chat Mode</span>
+                </div>
+                <div class="header-actions">
+                    <div class="connection-badge" id="connectionBadge">
+                        <span class="conn-dot"></span>
+                        <span>Connected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <!-- Welcome Message -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-glow"></div>
+                    <div class="welcome-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#grad1)" stroke-width="1.5" stroke-linejoin="round"/>
+                            <path d="M2 17L12 22L22 17" stroke="url(#grad1)" stroke-width="1.5" stroke-linejoin="round"/>
+                            <path d="M2 12L12 17L22 12" stroke="url(#grad1)" stroke-width="1.5" stroke-linejoin="round"/>
+                            <defs>
+                                <linearGradient id="grad1" x1="2" y1="2" x2="22" y2="22">
+                                    <stop offset="0%" stop-color="#818cf8"/>
+                                    <stop offset="100%" stop-color="#c084fc"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+                    <h2>Welcome to your AI Assistant</h2>
+                    <p>Ask anything or upload a document for context-aware Q&A</p>
+                    <div class="quick-actions">
+                        <button class="quick-btn" data-prompt="What can you help me with?">
+                            <span class="quick-icon">💡</span>
+                            <span>What can you do?</span>
+                        </button>
+                        <button class="quick-btn" data-prompt="Give me a brief introduction about yourself">
+                            <span class="quick-icon">👋</span>
+                            <span>Introduce yourself</span>
+                        </button>
+                        <button class="quick-btn" id="quickUpload">
+                            <span class="quick-icon">📄</span>
+                            <span>Upload a document</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="chat-input-area">
+                <div class="input-container">
+                    <textarea
+                        id="messageInput"
+                        placeholder="Type your message..."
+                        rows="1"
+                        autofocus
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" disabled aria-label="Send message">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+                <p class="input-hint">Press Enter to send • Shift+Enter for new line</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- ── System Monitor Widget ─────────────────── -->
+    <div class="sys-monitor" id="sysMonitor">
+        <button class="sys-monitor-toggle" id="sysMonitorToggle" title="System Monitor">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="12" y1="17" x2="12" y2="21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <div class="sys-monitor-panel" id="sysMonitorPanel">
+            <div class="sys-monitor-header">
+                <span>System Monitor</span>
+                <span class="sys-live-dot"></span>
+            </div>
+            <!-- CPU -->
+            <div class="sys-stat" id="cpuStat">
+                <div class="sys-ring-wrap">
+                    <svg class="sys-ring" viewBox="0 0 44 44">
+                        <circle class="sys-ring-bg" cx="22" cy="22" r="18"/>
+                        <circle class="sys-ring-fill cpu-ring" cx="22" cy="22" r="18"
+                                stroke-dasharray="113.1" stroke-dashoffset="113.1"/>
+                    </svg>
+                    <span class="sys-ring-label" id="cpuVal">0%</span>
+                </div>
+                <div class="sys-stat-info">
+                    <span class="sys-stat-name">CPU</span>
+                    <span class="sys-stat-detail" id="cpuDetail">--</span>
+                </div>
+            </div>
+            <!-- RAM -->
+            <div class="sys-stat" id="ramStat">
+                <div class="sys-ring-wrap">
+                    <svg class="sys-ring" viewBox="0 0 44 44">
+                        <circle class="sys-ring-bg" cx="22" cy="22" r="18"/>
+                        <circle class="sys-ring-fill ram-ring" cx="22" cy="22" r="18"
+                                stroke-dasharray="113.1" stroke-dashoffset="113.1"/>
+                    </svg>
+                    <span class="sys-ring-label" id="ramVal">0%</span>
+                </div>
+                <div class="sys-stat-info">
+                    <span class="sys-stat-name">RAM</span>
+                    <span class="sys-stat-detail" id="ramDetail">--</span>
+                </div>
+            </div>
+            <!-- GPU (shown only if available) -->
+            <div class="sys-stat" id="gpuStat" style="display:none;">
+                <div class="sys-ring-wrap">
+                    <svg class="sys-ring" viewBox="0 0 44 44">
+                        <circle class="sys-ring-bg" cx="22" cy="22" r="18"/>
+                        <circle class="sys-ring-fill gpu-ring" cx="22" cy="22" r="18"
+                                stroke-dasharray="113.1" stroke-dashoffset="113.1"/>
+                    </svg>
+                    <span class="sys-ring-label" id="gpuVal">0%</span>
+                </div>
+                <div class="sys-stat-info">
+                    <span class="sys-stat-name">GPU</span>
+                    <span class="sys-stat-detail" id="gpuDetail">--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Modal -->
+    <div class="modal-overlay" id="summaryModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Document Summary</h3>
+                <button class="modal-close" id="closeModal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="summaryContent">
+                <!-- filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
